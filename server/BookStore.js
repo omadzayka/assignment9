@@ -14,3 +14,13 @@ let nextId = 8;
 const slow = () new Promise((resolve) => setTimeout(resolve, 20));
 const same = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
+export async function getAll(id) {
+    await slow();
+    return books.map((b) => ({ ...b }));
+}
+
+export async function getById(id) {
+    await slow();
+    const found = books.find((b) => b.id === id);
+    return found ? { ...found } : null; 
+}
