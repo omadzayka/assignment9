@@ -24,3 +24,31 @@ export async function getById(id) {
     const found = books.find((b) => b.id === id);
     return found ? { ...found } : null; 
 }
+
+export async function findDuplicate(title, author, excludeId = null) {
+    await slow();
+     const found = books.find((b) => b.id !== excludeId && same(b.title, title) && same(b.author, author));
+     return found ? { ...found } : null;
+}
+
+export async function create(data) {
+  await slow();
+  const book = { ...data, id: nextId++ };
+  books = [...books, book];
+  return { ...book };
+}
+
+export async function replace(id, data) {
+  await slow();
+  if (!books.some((b) => b.id === id)) return null;
+  const book = { ...data, id };
+  books = books.map((b) => (b.id === id ? book : b));
+  return { ...book };
+}
+
+export async function remove(id) {
+  await slow();
+  if (!books.some((b) => b.id === id)) return false;
+  books = books.filter((b) => b.id !== id);
+  return true;
+}
