@@ -113,3 +113,22 @@ app.delete('/api/books/:id', async (req, res) => {
   if (!removed) return res.status(404).json({ error: `Book ${id} not found` });
   res.status(204).end();
 });
+
+// Deliberate crash to prove the error handler works (documented in README).
+app.get('/api/crash', async () => {
+  await store.getAll();
+  throw new Error('Deliberate crash');
+});
+
+app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
+
+// Error-handling middleware: must have four parameters.
+app.use((err, req, res, next) => {
+  if (err.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'Malformed JSON in request body' });
+  }
+  console.error(err);
+  res.status(500).json({ error: 'Something went wrong' });
+});
+
+app.listen(PORT, () => console.log(`Server listening on http://localhost:${PORT} (CORS origin: ${CLIENT_ORIGIN})`));
