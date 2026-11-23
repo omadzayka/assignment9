@@ -61,3 +61,55 @@ app.get('/api/stats', async (req, res) => {
     byGenre,
   });
 });
+
+app.get('/api/books/:id', async (req, res) => {
+  const id = parseId(req.params.id);
+  if (id === null) return bad(res, 'id must be a positive integer');
+  const book = await store.getById(id);
+  if (!book) return res.status(404).json({ error: `Book ${id} not found` });
+  res.json(book);
+});
+
+app.post('/api/books', async (req, res) => {
+  const result = validateBook(pickFields(req.body));
+  if (result.error) return bad(res, result.error);
+  const dup = await store.findDuplicate(result.value.title, result.value.author);
+  if (dup) return conflict(res, dup);
+  const book = await store.create(result.value);
+  res.status(201).location(`/api/books/${book.id}`).json(book);
+});
+
+app.put('/api/books/:id', async (req, res) => {
+  const id = parseId(req.params.id);
+  if (id === null) return bad(res, 'id must be a positive integer');
+  const result = validateBook(pickFields(req.body));
+  if (result.error) return bad(res, result.error);
+  if (!(await store.getById(id))) return res.status(404).json({ error: `Book ${id} not found` });
+  const dup = await store.findDuplicate(result.value.title, result.value.author, id);
+  if (dup) return conflict(res, dup);
+  res.json(await store.replace(id, result.value));
+});
+
+app.patch('/api/books/:id', async (req, res) => {
+  const id = parseId(req.params.id);
+  if (id === null) return bad(res, 'id must be a positive integer');
+  if (req.body === undefined || req.body === null || typeof req.body !== 'object' || Array.isArray(req.body)) {
+    return bad(res, 'Request body must be a JSON object');
+  }
+  const existing = await store.getById(id);
+  if (!existing) return res.status(404).json({ error: `Book ${id} not found` });
+  const { id: _ignored, ...current } = existing;
+  const result = validateBook({ ...current, ...pickFields(req.body) });
+  if (result.error) return bad(res, result.error);
+  const dup = await store.findDuplicate(result.value.title, result.value.author, id);
+  if (dup) return conflict(res, dup);
+  res.json(await store.replace(id, result.value));
+});
+
+app.delete('/api/books/:id', async (req, res) => {
+  const id = parseId(req.params.id);
+  if (id === null) return bad(res, 'id must be a positive integer');
+  const removed = await store.remove(id);
+  if (!removed) return res.status(404).json({ error: `Book ${id} not found` });
+  res.status(204).end();
+});
