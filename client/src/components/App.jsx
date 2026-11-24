@@ -56,3 +56,44 @@ export default function App() {
     }
   }
  
+  const handleAdd = (data) => mutate(() => createBook(data));
+  const handleEdit = (data) => mutate(() => replaceBook(editing.id, data)).then(() => setEditing(null));
+  // Row actions (toggle, rate, delete) have no form, so show their errors in the banner.
+  const safe = (fn) => fn().catch((err) => setActionError(err.message));
+
+  const handleToggleRead = (book) =>
+    safe(() => mutate(() => patchBook(book.id, book.read ? { read: false, rating: null } : { read: true })));
+  const handleRate = (book, rating) => safe(() => mutate(() => patchBook(book.id, { rating })));
+  const handleDelete = (book) => {
+    if (!window.confirm(`Delete “${book.title}”?`)) return;
+    safe(() => mutate(() => deleteBook(book.id)));
+  };
+
+  return (
+    <main>
+      <h1>Reading List</h1>
+      <StatsPanel stats={stats} error={statsError} />
+
+      {editing ? (
+        <BookForm key={editing.id} initial={editing} onSubmit={handleEdit} onCancel={() => setEditing(null)} />
+      ) : (
+        <BookForm onSubmit={handleAdd} />
+      )}
+
+      <Filters filters={filters} onChange={setFilters} />
+      {actionError && <p className="error" role="alert">{actionError}</p>}
+
+      {loading && <p>Loading books…</p>}
+      {error && <p className="error" role="alert">Could not load books: {error}</p>}
+      {!loading && !error && books.length === 0 && <p className="muted">No books match these filters.</p>}
+      {!error && books.length > 0 && (
+        <ul style={{ padding: 0 }}>
+          {books.map((b) => (
+            <BookItem key={b.id} book={b} busy={busy} onToggleRead={handleToggleRead}
+              onRate={handleRate} onEdit={setEditing} onDelete={handleDelete} />
+          ))}
+        </ul>
+      )}
+    </main>
+  );
+}
