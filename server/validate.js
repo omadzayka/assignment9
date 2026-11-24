@@ -25,3 +25,51 @@ export function validateBook(input) {
   if (!Number.isInteger(year) || year < 1000 || year > currentYear) {
     errors.push(`year must be an integer between 1000 and ${currentYear}`);
   }
+const { genre } = input;
+  if (!GENRES.includes(genre)) errors.push(`genre must be one of: ${GENRES.join(', ')}`);
+
+  const read = input.read === undefined ? false : input.read;
+  if (typeof read !== 'boolean') errors.push('read must be a boolean');
+
+  const rating = input.rating === undefined ? null : input.rating;
+  if (rating !== null) {
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) errors.push('rating must be an integer from 1 to 5, or null');
+    else if (read !== true) errors.push('rating is allowed only when read is true');
+  }
+
+  if (errors.length > 0) return { error: errors.join('; ') };
+  return { value: { title, author, year, genre, read, rating } };
+}
+
+// Keeps only known book fields (ignores id and unknown fields).
+export function pickFields(input) {
+  const out = {};
+  if (!isObject(input)) return out;
+  for (const key of BOOK_FIELDS) if (key in input) out[key] = input[key];
+  return out;
+}
+
+export function parseQuery(query) {
+  for (const key of ['genre', 'read', 'q', 'sort', 'order', 'limit', 'page']) {
+    if (Array.isArray(query[key])) return { error: `Query parameter "${key}" must not be repeated` };
+  }
+  const out = { sort: 'id', order: 'asc', limit: 50, page: 1 };
+
+  if (query.genre !== undefined) {
+    if (!GENRES.includes(query.genre)) return { error: `genre must be one of: ${GENRES.join(', ')}` };
+    out.genre = query.genre;
+  }
+  if (query.read !== undefined) {
+    if (query.read !== 'true' && query.read !== 'false') return { error: 'read must be "true" or "false"' };
+    out.read = query.read === 'true';
+  }
+  if (query.q !== undefined) out.q = query.q.trim().toLowerCase();
+  if (query.sort !== undefined) {
+    if (!['title', 'author', 'year', 'rating'].includes(query.sort)) return { error: 'sort must be one of: title, author, year, rating' };
+    out.sort = query.sort;
+  }
+  if (query.order !== undefined) {
+    if (!['asc', 'desc'].includes(query.order)) return { error: 'order must be "asc" or "desc"' };
+    out.order = query.order;
+  } 
+    
