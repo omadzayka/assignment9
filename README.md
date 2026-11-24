@@ -173,3 +173,37 @@ Access-Control-Allow-Headers: content-type
 Content-Length: 0
 
 Preflight (browser Network tab). For PATCH/PUT/DELETE the browser first sends OPTIONS /api/books/<id> with Origin, Access-Control-Request-Method and Access-Control-Request-Headers. The server answers 204 with Access-Control-Allow-Origin: http://localhost:5173, Access-Control-Allow-Methods and Access-Control-Allow-Headers; only then does the real request go out. Item 15 reproduces it.
+
+Reasoning questions
+Parameters. id names one resource, so it goes in the path and the method says what to do with it. genre and sort only filter or order a collection, so they are query parameters. With ?id=3 the URL would look like a list filter, and it would be unclear whether the result is one book or an array.
+
+Body parsing. With express.json() below the routes, req.body was undefined and the POST returned 400, even though the JSON was valid.
+One response. Without return, the handler sent the 404 and then tried to send another response. Node threw ERR_HTTP_HEADERS_SENT. return stops the handler after the first response.
+
+PUT and PATCH. PATCH suits the read checkbox and rating dropdown, which change one field. PUT suits the edit form, which sends the whole book and resets any omitted optional field to its default.
+
+CORS. The console showed "blocked by CORS policy". The server still received a simple GET (and logged it), but the browser hid the response; for PUT/PATCH/DELETE only the preflight arrived. curl still works because only browsers enforce CORS.
+
+Validation. Client checks are a convenience and can be bypassed (curl, other apps). Only the server can enforce the rules for everyone, including duplicates and existing ids.
+
+State. After a restart all changes were gone and the seed data returned. The data lives only in the server's memory, so keeping it needs a file or a database.
+
+Self-study notes
+URLSearchParams: builds and encodes the query string safely (client/src/api/books.js).
+
+localeCompare: alphabetical, case-insensitive sorting; multiplied by -1 for descending (server.js).
+
+import.meta.env: Vite exposes only VITE_-prefixed variables to the browser, read at startup.
+
+204: has no body, so res.status(204).end(); the client helper returns null instead of parsing JSON.
+
+AbortController: the effect cleanup aborts the old fetch; I ignore the resulting AbortError so old responses never overwrite new ones (App.jsx).
+
+Challenges
+
+npm init in the wrong folder gave an empty lock file and a CommonJS package.json; I moved it into server/ and set "type": "module".
+
+A misnamed BookStore.js caused ERR_MODULE_NOT_FOUND; a missing => and a missing const set line caused a syntax error and a blank page.
+
+The template App.jsx imported deleted assets until I replaced it.
+A missing client/.env made the API URL undefined, so the client received HTML instead of JSON.
