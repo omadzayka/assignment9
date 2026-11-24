@@ -20,8 +20,7 @@ async function request(path, { method = 'GET', body, signal } = {}) {
     }
     throw new Error(message);
   }
-
-if (response.status === 204) return null;
+  if (response.status === 204) return null;
   return response.json();
 }
 
