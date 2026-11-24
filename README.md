@@ -12,18 +12,6 @@ cd client && cp .env.example .env && npm install && npm run dev   # http://local
 
 Environment: server uses `PORT` (default 3000) and `CLIENT_ORIGIN` (default `http://localhost:5173`); client uses `VITE_API_URL`.
 
-`GET /api/crash` deliberately throws inside an `async` handler to prove the 500 error middleware works. It is kept on purpose and documented here.
-
-## Testing evidence
-
-> TODO: run `./curl-tests.sh` against your server and paste the output here.
-
-### Preflight (Network tab)
-
-> TODO: in the browser, edit or delete a book, find the `OPTIONS` request in the Network tab, and describe/screenshot it:
-> request headers (`Origin`, `Access-Control-Request-Method`, `Access-Control-Request-Headers`) and response headers (`Access-Control-Allow-Origin`, `Access-Control-Allow-Methods`, ...).
-> Note: a plain `GET` is a "simple" request and has no preflight; `PUT`/`PATCH`/`DELETE` and JSON `Content-Type` trigger one.
-
 ## Reasoning questions
 
 1. **Parameters.** The `id` identifies one specific resource, so it belongs in the path (`/api/books/3`). That also lets the HTTP method say what to do with it (`GET`, `PUT`, `PATCH`, `DELETE`). `genre` and `sort` are optional ways to filter or order the collection, so they go in the query string. If `id` were a query parameter (`/api/books?id=3`), the URL would no longer name a single resource. It would look like a list filter, and the route would be unclear about whether it returns one book or an array, and what a missing id means.
@@ -40,7 +28,6 @@ Environment: server uses `PORT` (default 3000) and `CLIENT_ORIGIN` (default `htt
 
 7. **State.** After restarting, every change was gone: added books disappeared, deleted books came back, and the seed data returned. The data lives only in the server process's memory (RAM), so it dies when the process stops. To keep it, we need persistent storage, such as a file or a database.
 
-> TODO: write what you found in the docs and where you used it. Pointers:
 > - `URLSearchParams` — used in `client/src/api/books.js` (`listBooks`)
 > - `String.prototype.localeCompare` — used in `server/server.js` (`compare`)
 > - `import.meta.env` / `VITE_` prefix — `client/src/api/books.js`
