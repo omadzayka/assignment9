@@ -20,4 +20,22 @@ async function request(path, { method = 'GET', body, signal } = {}) {
     }
     throw new Error(message);
   }
-  
+
+if (response.status === 204) return null;
+  return response.json();
+}
+
+export function listBooks(filters, signal) {
+  const params = new URLSearchParams(); // handles encoding safely
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== '' && value != null) params.set(key, value);
+  }
+  const qs = params.toString();
+  return request(`/api/books${qs ? `?${qs}` : ''}`, { signal });
+}
+
+export const getStats = (signal) => request('/api/stats', { signal });
+export const createBook = (book) => request('/api/books', { method: 'POST', body: book });
+export const replaceBook = (id, book) => request(`/api/books/${id}`, { method: 'PUT', body: book });
+export const patchBook = (id, changes) => request(`/api/books/${id}`, { method: 'PATCH', body: changes });
+export const deleteBook = (id) => request(`/api/books/${id}`, { method: 'DELETE' });
