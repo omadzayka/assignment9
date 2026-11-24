@@ -1,122 +1,99 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useEffect, useState } from 'react';
+import { listBooks, getStats, createBook, replaceBook, patchBook, deleteBook } from './api/books.js';
+import Filters from './components/Filters.jsx';
+import StatsPanel from './components/StatsPanel.jsx';
+import BookForm from './components/BookForm.jsx';
+import BookItem from './components/BookItem.jsx';
 
-function App() {
-  const [count, setCount] = useState(0)
+const INITIAL_FILTERS = { q: '', genre: '', read: '', sort: '', order: 'asc' };
+
+export default function App() {
+  const [filters, setFilters] = useState(INITIAL_FILTERS);
+  const [books, setBooks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [stats, setStats] = useState(null);
+  const [statsError, setStatsError] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0); // bump after every successful change
+  const [editing, setEditing] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState(null);
+
+  // List: new request whenever filters change; stale responses are ignored.
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError(null);
+    // order is meaningless without a sort field, but harmless; omit it when not sorting
+    const params = { ...filters, order: filters.sort ? filters.order : '' };
+    listBooks(params, controller.signal)
+      .then((data) => { setBooks(data); setLoading(false); })
+      .catch((err) => {
+        if (err.name === 'AbortError') return; // superseded by a newer request
+        setError(err.message);
+        setLoading(false);
+      });
+    return () => controller.abort();
+  }, [filters, reloadKey]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getStats(controller.signal)
+      .then((data) => { setStats(data); setStatsError(null); })
+      .catch((err) => { if (err.name !== 'AbortError') setStatsError(err.message); });
+    return () => controller.abort();
+  }, [reloadKey]);
+
+  // Runs a mutation; the screen only changes after the server confirms (via reload).
+  async function mutate(action) {
+    setBusy(true);
+    setActionError(null);
+    try {
+      await action();
+      setReloadKey((k) => k + 1);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const handleAdd = (data) => mutate(() => createBook(data));
+  const handleEdit = (data) => mutate(() => replaceBook(editing.id, data)).then(() => setEditing(null));
+  // Row actions (toggle, rate, delete) have no form, so show their errors in the banner.
+  const safe = (fn) => fn().catch((err) => setActionError(err.message));
+
+  const handleToggleRead = (book) =>
+    safe(() => mutate(() => patchBook(book.id, book.read ? { read: false, rating: null } : { read: true })));
+  const handleRate = (book, rating) => safe(() => mutate(() => patchBook(book.id, { rating })));
+  const handleDelete = (book) => {
+    if (!window.confirm(`Delete “${book.title}”?`)) return;
+    safe(() => mutate(() => deleteBook(book.id)));
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <main>
+      <h1>Reading List</h1>
+      <StatsPanel stats={stats} error={statsError} />
 
-      <div className="ticks"></div>
+      {editing ? (
+        <BookForm key={editing.id} initial={editing} onSubmit={handleEdit} onCancel={() => setEditing(null)} />
+      ) : (
+        <BookForm onSubmit={handleAdd} />
+      )}
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      <Filters filters={filters} onChange={setFilters} />
+      {actionError && <p className="error" role="alert">{actionError}</p>}
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      {loading && <p>Loading books…</p>}
+      {error && <p className="error" role="alert">Could not load books: {error}</p>}
+      {!loading && !error && books.length === 0 && <p className="muted">No books match these filters.</p>}
+      {!error && books.length > 0 && (
+        <ul style={{ padding: 0 }}>
+          {books.map((b) => (
+            <BookItem key={b.id} book={b} busy={busy} onToggleRead={handleToggleRead}
+              onRate={handleRate} onEdit={setEditing} onDelete={handleDelete} />
+          ))}
+        </ul>
+      )}
+    </main>
+  );
 }
-
-export default App
