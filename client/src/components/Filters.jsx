@@ -1,8 +1,10 @@
 const GENRES = ['fiction', 'non-fiction', 'science', 'history', 'fantasy', 'other'];
 
 export default function Filters({ filters, onChange }) {
-    return(
-         <div className="row">
+  const set = (name) => (e) => onChange({ ...filters, [name]: e.target.value });
+
+  return (
+    <div className="row">
       <input type="search" placeholder="Search title or author" value={filters.q} onChange={set('q')} />
       <select value={filters.genre} onChange={set('genre')} aria-label="Genre">
         <option value="">All genres</option>
@@ -25,5 +27,5 @@ export default function Filters({ filters, onChange }) {
         <option value="desc">Descending</option>
       </select>
     </div>
-    );
+  );
 }
