@@ -72,4 +72,13 @@ export function parseQuery(query) {
     if (!['asc', 'desc'].includes(query.order)) return { error: 'order must be "asc" or "desc"' };
     out.order = query.order;
   } 
-    
+   if (query.limit !== undefined) {
+    if (!/^\d+$/.test(query.limit) || Number(query.limit) < 1 || Number(query.limit) > 50) return { error: 'limit must be an integer from 1 to 50' };
+    out.limit = Number(query.limit);
+  }
+  if (query.page !== undefined) {
+    if (!/^\d+$/.test(query.page) || Number(query.page) < 1) return { error: 'page must be an integer of 1 or more' };
+    out.page = Number(query.page);
+  }
+  return { value: out };
+} 
