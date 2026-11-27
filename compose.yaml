@@ -1,0 +1,11 @@
+services:
+  mongo:
+    image: mongo:8
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:27017:27017"   # reachable from this computer only
+    volumes:
+      - mongo-data:/data/db       # named volume: data survives `docker compose down`
+
+volumes:
+  mongo-data:
